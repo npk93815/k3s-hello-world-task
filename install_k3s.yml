@@ -1,0 +1,40 @@
+---
+- name: Install k3s on a single-node Linux machine
+  hosts: all
+  become: yes
+  vars:
+    ansible_user: pavan
+
+  tasks:
+    - name: Ensure required packages are installed
+      apt:
+        name: [curl]
+        state: present
+        update_cache: yes
+
+    - name: Download and install the latest k3s
+      shell: |
+        curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for k3s service to be active
+      systemd:
+        name: k3s
+        state: started
+        enabled: yes
+
+    - name: Create .kube directory
+      file:
+        path: /home/{{ ansible_user }}/.kube
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Copy kubeconfig to the user home
+      copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /home/{{ ansible_user }}/.kube/config
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: '0644'
